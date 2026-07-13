@@ -159,7 +159,7 @@ message
 
 除了客户端发送 `deliveryMode:"stream"`，Agent/环境还需要支持 Direct Line streaming。
 
-参考实现中将该后端标志称为：
+当前实验环境中观察到的后端功能标志名称为：
 
 ```text
 Channels_SupportForStreamingEnabled
@@ -197,6 +197,8 @@ Browser → your backend → Direct Line /tokens/generate
 
 ## 官方链接
 
+- [Copilot Studio — Publish an agent to mobile or custom apps（官方 Direct Line 接入）](https://learn.microsoft.com/en-us/microsoft-copilot-studio/publication-connect-bot-to-custom-application)
+- [Copilot Studio — Publish an agent to a live or demo website](https://learn.microsoft.com/en-us/microsoft-copilot-studio/publication-connect-bot-to-web-channels)
 - [Bot Framework WebChat — Livestreaming](https://github.com/microsoft/BotFramework-WebChat/blob/main/docs/LIVESTREAMING.md)
 - [Direct Line API 3.0 — Key concepts](https://learn.microsoft.com/en-us/azure/bot-service/rest-api/bot-framework-rest-direct-line-3-0-concepts)
 - [Direct Line authentication](https://learn.microsoft.com/en-us/azure/bot-service/rest-api/bot-framework-rest-direct-line-3-0-authentication)
@@ -204,13 +206,6 @@ Browser → your backend → Direct Line /tokens/generate
 - [Customize a Copilot Studio canvas](https://learn.microsoft.com/en-us/microsoft-copilot-studio/customize-default-canvas)
 - [Copilot Studio support](https://learn.microsoft.com/en-us/microsoft-copilot-studio/fundamentals-support)
 - [Power Platform support requests](https://admin.powerplatform.microsoft.com/support/requests)
-
-## 参考项目
-
-本实现参考并简化了：
-
-- [jzh24516/copilot-streaming-chat-playground](https://github.com/jzh24516/copilot-streaming-chat-playground)
-- [Streaming Responses in Copilot Studio — Tech Note](https://jzh24516.github.io/copilot-streaming-chat-playground/docs/streaming-tech-note.html)
 
 ## License
 
