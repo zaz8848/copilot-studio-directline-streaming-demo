@@ -1,0 +1,13 @@
+{
+  "name": "copilot-studio-directline-streaming-demo",
+  "version": "1.0.0",
+  "private": false,
+  "description": "A standalone Direct Line WebSocket livestreaming playground for Microsoft Copilot Studio.",
+  "license": "MIT",
+  "scripts": {
+    "start": "serve . -l 3102"
+  },
+  "devDependencies": {
+    "serve": "^14.2.4"
+  }
+}

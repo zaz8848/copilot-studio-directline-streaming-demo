@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Copilot Studio Direct Line WebSocket 真流式输出验证工具" />
+  <title>Copilot Studio Direct Line Streaming</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/botframework-webchat@latest/dist/webchat.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+      --ink: #182230;
+      --muted: #667085;
+      --line: #dfe4ea;
+      --surface: #ffffff;
+      --canvas: #f6f7f9;
+      --accent: #155eef;
+      --success: #067647;
+      --danger: #b42318;
+      --warning: #b54708;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--canvas); color: var(--ink); }
+    button, input { font: inherit; }
+    button:focus-visible { outline: 3px solid #84adff; outline-offset: 2px; }
+    .app { width: min(1240px, 100%); height: 100vh; margin: auto; padding: 20px; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; }
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+    .chat { min-height: 0; display: grid; grid-template-rows: auto 1fr; }
+    .header { min-height: 72px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line); }
+    .brand h1 { margin: 0; font-size: 17px; letter-spacing: -.01em; }
+    .brand p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .actions { display: flex; align-items: center; gap: 10px; }
+    .badge { padding: 6px 10px; border-radius: 999px; background: #f2f4f7; color: var(--muted); font-size: 12px; font-weight: 600; }
+    .badge.ok { background: #ecfdf3; color: var(--success); }
+    .badge.bad { background: #fef3f2; color: var(--danger); }
+    .primary { min-height: 40px; padding: 8px 14px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer; font-weight: 650; }
+    .primary:hover { background: #004eeb; }
+    #webchat { min-height: 0; height: 100%; }
+    .setup { height: 100%; display: grid; place-items: center; padding: 24px; text-align: center; }
+    .setup article { max-width: 520px; }
+    .setup h2 { margin: 0 0 8px; font-size: 22px; }
+    .setup p { margin: 0 0 14px; color: var(--muted); line-height: 1.6; }
+    code { padding: 2px 5px; border-radius: 5px; background: #f2f4f7; font: 12px/1.5 Consolas, monospace; }
+    .inspector { padding: 18px; overflow: auto; }
+    .inspector h2 { margin: 0 0 14px; font-size: 15px; }
+    .notice { margin-bottom: 16px; padding: 10px 12px; border: 1px solid #fedf89; border-radius: 9px; background: #fffaeb; color: #93370d; font-size: 12px; line-height: 1.5; }
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+    .metric { padding: 10px; border: 1px solid var(--line); border-radius: 9px; }
+    .metric strong { display: block; font-size: 21px; font-variant-numeric: tabular-nums; }
+    .metric span { color: var(--muted); font-size: 11px; }
+    .diagnosis { margin-bottom: 16px; padding: 10px 12px; border-radius: 9px; background: #f2f4f7; color: var(--muted); font-size: 12px; font-weight: 600; }
+    .diagnosis.ok { background: #ecfdf3; color: var(--success); }
+    .diagnosis.bad { background: #fef3f2; color: var(--danger); }
+    .log { display: grid; gap: 7px; }
+    .event { padding: 8px 9px; border: 1px solid var(--line); border-left: 3px solid #98a2b3; border-radius: 7px; font: 11px/1.45 Consolas, monospace; overflow-wrap: anywhere; }
+    .event.streaming { border-left-color: var(--success); }
+    .event.informative { border-left-color: #7f56d9; }
+    .event.final { border-left-color: var(--accent); }
+    .event .meta { color: var(--muted); }
+    @media (max-width: 820px) {
+      .app { height: auto; min-height: 100vh; padding: 0; grid-template-columns: 1fr; }
+      .chat { min-height: 100vh; border-radius: 0; }
+      .inspector { display: none; }
+      .brand p { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="panel chat" aria-label="Copilot Studio streaming chat">
+      <header class="header">
+        <div class="brand">
+          <h1>Copilot Studio · Direct Line Streaming</h1>
+          <p>WebSocket · deliveryMode:"stream" · streaminfo inspector</p>
+        </div>
+        <div class="actions">
+          <span id="status" class="badge">未连接</span>
+          <button id="connect" class="primary" type="button">连接 Agent</button>
+        </div>
+      </header>
+      <div id="webchat">
+        <div class="setup">
+          <article>
+            <h2>真流式验证工具</h2>
+            <p>将源码中的 <code>PASTE_YOUR_DIRECT_LINE_SECRET_HERE</code> 替换为测试 Agent 的 Direct Line Secret，然后点击“连接 Agent”。</p>
+            <p>此模式仅适合本地测试。生产环境请使用后端 token broker，禁止把 Secret 放进浏览器。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel inspector" aria-label="Activity inspector">
+      <h2>Activity Inspector</h2>
+      <div class="notice">真流式必须同时满足：WebSocket、客户端 opt-in、Agent 侧 streaming feature flag。</div>
+      <div class="metrics">
+        <div class="metric"><strong id="streams">0</strong><span>streams</span></div>
+        <div class="metric"><strong id="chunks">0</strong><span>chunks</span></div>
+        <div class="metric"><strong id="finals">0</strong><span>finals</span></div>
+      </div>
+      <div id="diagnosis" class="diagnosis">等待 Activity…</div>
+      <div id="log" class="log"></div>
+    </aside>
+  </main>
+
+  <script>
+    // LOCAL TEST ONLY: replace this placeholder locally. Never commit a real Secret.
+    const DIRECT_LINE_SECRET = 'PASTE_YOUR_DIRECT_LINE_SECRET_HERE';
+    const DIRECT_LINE_DOMAIN = 'https://directline.botframework.com/v3/directline';
+
+    const TENANT_ID = '';
+    const ENVIRONMENT_ID = '';
+
+    const statusEl = document.getElementById('status');
+    const connectButton = document.getElementById('connect');
+    const webchatEl = document.getElementById('webchat');
+    const logEl = document.getElementById('log');
+    const streamsEl = document.getElementById('streams');
+    const chunksEl = document.getElementById('chunks');
+    const finalsEl = document.getElementById('finals');
+    const diagnosisEl = document.getElementById('diagnosis');
+
+    const streamIds = new Set();
+    let chunks = 0;
+    let finals = 0;
+    let activeConnection;
+    let statusSubscription;
+
+    function setStatus(text, state = '') {
+      statusEl.textContent = text;
+      statusEl.className = `badge ${state}`.trim();
+    }
+
+    function getStreamInfo(activity) {
+      const raw = activity.channelData?.streamType
+        ? activity.channelData
+        : activity.entities?.find(entity => entity?.type === 'streaminfo' && entity.streamType);
+
+      if (!raw) return null;
+      const { streamType, streamId, streamSequence } = raw;
+      const sequenceIsValid = Number.isInteger(streamSequence) && streamSequence >= 1;
+      const valid = (streamType === 'streaming' || streamType === 'informative')
+        ? activity.type === 'typing' && sequenceIsValid
+        : streamType === 'final'
+          ? (activity.type === 'message' || activity.type === 'typing') && Boolean(streamId)
+          : false;
+
+      return { streamType, streamId, streamSequence, valid };
+    }
+
+    function inspect(activity) {
+      const info = getStreamInfo(activity);
+      const isBotMessage = activity.type === 'message' && activity.from?.role !== 'user';
+
+      if (info?.valid) {
+        if (info.streamId) streamIds.add(info.streamId);
+        if (info.streamType === 'streaming' || info.streamType === 'informative') chunks++;
+        if (info.streamType === 'final') finals++;
+      } else if (isBotMessage && activity.text) {
+        finals++;
+      }
+
+      streamsEl.textContent = String(streamIds.size);
+      chunksEl.textContent = String(chunks);
+      finalsEl.textContent = String(finals);
+
+      if (chunks > 0) {
+        diagnosisEl.textContent = `真流式：${chunks} 个增量片段`;
+        diagnosisEl.className = 'diagnosis ok';
+      } else if (finals > 0) {
+        diagnosisEl.textContent = '未流式：仅普通 typing + 最终消息';
+        diagnosisEl.className = 'diagnosis bad';
+      }
+
+      if (!info && activity.type !== 'typing' && !isBotMessage) return;
+      const row = document.createElement('div');
+      const streamType = info?.streamType || activity.type;
+      row.className = `event ${streamType}`;
+      row.innerHTML = `
+        <strong>${streamType}${info?.streamSequence ? ` #${info.streamSequence}` : ''}</strong>
+        <div>${escapeHtml((activity.text || '').slice(0, 180))}</div>
+        <div class="meta">${escapeHtml(info?.streamId || activity.id || '—')}</div>
+      `;
+      logEl.prepend(row);
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[char]);
+    }
+
+    function wrapWithStreaming(connection) {
+      const observers = new Set();
+      const completed = new Map();
+      let upstreamSubscription;
+
+      const broadcast = activity => {
+        for (const observer of observers) observer.next?.(activity);
+      };
+
+      const handle = activity => {
+        const info = getStreamInfo(activity);
+
+        if (info?.valid && (info.streamType === 'streaming' || info.streamType === 'informative')) {
+          const id = info.streamId || activity.id;
+          const text = activity.text || '';
+          broadcast({ ...activity, type: 'message', id, text, from: { ...activity.from, role: 'bot' } });
+          completed.set(id, text);
+          return;
+        }
+
+        if (info?.valid && info.streamType === 'final') {
+          const id = info.streamId || activity.id;
+          const text = activity.text || completed.get(id) || '';
+          broadcast({ ...activity, type: 'message', id, text, from: { ...activity.from, role: 'bot' } });
+          completed.set(id, text);
+          return;
+        }
+
+        const isBotMessage = activity.type === 'message' && activity.from?.role !== 'user';
+        if (isBotMessage && !info && activity.text) {
+          for (const text of completed.values()) {
+            if (text === activity.text) return;
+          }
+        }
+        broadcast(activity);
+      };
+
+      const activity$ = {
+        subscribe(observerOrNext, error, complete) {
+          const observer = typeof observerOrNext === 'function'
+            ? { next: observerOrNext, error, complete }
+            : observerOrNext || {};
+
+          observers.add(observer);
+          if (observers.size === 1) {
+            upstreamSubscription = connection.activity$.subscribe({
+              next: activity => { inspect(activity); handle(activity); },
+              error: reason => { for (const target of observers) target.error?.(reason); },
+              complete: () => { for (const target of observers) target.complete?.(); },
+            });
+          }
+
+          return {
+            unsubscribe() {
+              observers.delete(observer);
+              if (!observers.size && upstreamSubscription) {
+                upstreamSubscription.unsubscribe();
+                upstreamSubscription = undefined;
+              }
+            },
+          };
+        },
+      };
+
+      const wrapped = Object.create(connection);
+      wrapped.activity$ = activity$;
+      wrapped.postActivity = activity => connection.postActivity(
+        activity?.type === 'message' ? { ...activity, deliveryMode: 'stream' } : activity,
+      );
+      return wrapped;
+    }
+
+    async function generateToken(secret, userId) {
+      const response = await fetch(`${DIRECT_LINE_DOMAIN}/tokens/generate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user: { id: userId, name: 'Streaming tester' },
+          trustedOrigins: location.origin === 'null' ? [] : [location.origin],
+        }),
+      });
+
+      if (!response.ok) throw new Error(`Token generation failed: HTTP ${response.status}`);
+      return response.json();
+    }
+
+    async function connect() {
+      if (!DIRECT_LINE_SECRET || DIRECT_LINE_SECRET.includes('PASTE_YOUR_')) {
+        setStatus('请先填写 Secret', 'bad');
+        return;
+      }
+
+      connectButton.disabled = true;
+      setStatus('生成短期 token…');
+      logEl.innerHTML = '';
+      streamIds.clear(); chunks = 0; finals = 0;
+      streamsEl.textContent = chunksEl.textContent = finalsEl.textContent = '0';
+      diagnosisEl.textContent = '等待 Activity…'; diagnosisEl.className = 'diagnosis';
+
+      try {
+        activeConnection?.end?.();
+        statusSubscription?.unsubscribe?.();
+
+        const userId = `dl_${crypto.randomUUID()}`;
+        const tokenData = await generateToken(DIRECT_LINE_SECRET, userId);
+        const raw = window.WebChat.createDirectLine({
+          token: tokenData.token,
+          domain: DIRECT_LINE_DOMAIN,
+          webSocket: true,
+        });
+        const connection = wrapWithStreaming(raw);
+        activeConnection = connection;
+
+        statusSubscription = connection.connectionStatus$.subscribe(status => {
+          if (status !== 2) return;
+          setStatus('已连接 · 请求真流式', 'ok');
+          const optIn = {
+            type: 'event',
+            name: 'startConversation',
+            deliveryMode: 'stream',
+            channelId: 'webchat',
+            from: { id: userId, role: 'user' },
+            locale: 'en-US',
+            channelData: { postBack: true },
+            value: { __version__: '2' },
+            entities: [{
+              type: 'ClientCapabilities',
+              requiresBotState: true,
+              supportsListening: true,
+              supportsTts: true,
+            }],
+          };
+          if (TENANT_ID) optIn.cci_tenant_id = TENANT_ID;
+          if (ENVIRONMENT_ID) optIn.cci_environment_id = ENVIRONMENT_ID;
+          connection.postActivity(optIn).subscribe({
+            next: () => setStatus('已连接 · 已请求真流式', 'ok'),
+            error: error => { console.error(error); setStatus('流式 opt-in 失败', 'bad'); },
+          });
+        });
+
+        webchatEl.innerHTML = '';
+        const mount = document.createElement('div');
+        mount.style.height = '100%';
+        webchatEl.appendChild(mount);
+        window.WebChat.renderWebChat({
+          directLine: connection,
+          userID: userId,
+          locale: 'zh-CN',
+          styleOptions: {
+            accent: '#155eef',
+            backgroundColor: '#ffffff',
+            bubbleBackground: '#f2f4f7',
+            bubbleFromUserBackground: '#dbeafe',
+            bubbleBorderRadius: 12,
+            bubbleFromUserBorderRadius: 12,
+            sendBoxBackground: '#ffffff',
+          },
+        }, mount);
+      } catch (error) {
+        console.error(error);
+        setStatus(error.message, 'bad');
+      } finally {
+        connectButton.disabled = false;
+      }
+    }
+
+    connectButton.addEventListener('click', connect);
+  </script>
+</body>
+</html>
