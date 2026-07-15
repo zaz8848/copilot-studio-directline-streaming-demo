@@ -15,6 +15,12 @@ informative typing → streaming typing #1..N → final message
 - `streamSequence`
 - `entities[type="streaminfo"]` 或 `channelData`
 
+## 相关运行手册
+
+- [使用 PAC CLI 模板克隆 Copilot Studio Agent](docs/pac-copilot-template-clone-agent.md)：在同一个 Dataverse 环境中，通过 `extract-template` + `create` 创建独立 Agent，并复用已有 Flow、Action 与 Connection Reference。手册包含 PAC 2.9.3 的版本限制、Instructions 补回、Schema Name 防冲突和验收清单。
+
+> 该流程中的“创建后发布状态”和“连接引用自动解析”属于特定 CLI 版本与同环境实测结果，不应视为跨版本保证；每次创建后都必须实际复核 Instructions、连接、Flow、发布状态和最小端到端调用。
+
 ## 两条真流式路径
 
 Copilot Studio 目前有两种真流式接入方式：
