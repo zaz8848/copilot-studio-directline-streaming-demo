@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Copilot Studio Streaming Toolkit</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="stylesheet" href="/streaming.css" />
+    <script crossorigin="anonymous"
+        src="https://cdn.jsdelivr.net/npm/botframework-webchat@latest/dist/webchat.js"></script>
+</head>
+
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div>
+                <p class="eyebrow">COPILOT STUDIO · DIRECT LINE + D2E</p>
+                <h1>Streaming Toolkit</h1>
+            </div>
+        </div>
+        <div class="connection-state" id="connectionState" data-state="connecting" role="status">
+            <span class="state-dot"></span>
+            <span id="connectionLabel">正在初始化</span>
+        </div>
+    </header>
+
+    <main class="workspace">
+        <aside class="rail" aria-label="Streaming test controls">
+            <section>
+                <div class="section-heading">
+                    <span>连接</span>
+                    <span class="badge" id="connectionModeBadge">SERVER RELAY</span>
+                </div>
+                <label class="config-field">
+                    <span>Streaming 模式</span>
+                    <select id="transportMode">
+                        <option value="directline">Direct Line · WebSocket</option>
+                        <option value="d2e">D2E · 原生 SSE Streaming</option>
+                    </select>
+                </label>
+                <div id="directLineConfig">
+                    <label class="config-field">
+                        <span>Connection 来源</span>
+                        <select id="connectionSource">
+                            <option value="server">服务端 .env</option>
+                            <option value="browser">浏览器本地配置</option>
+                        </select>
+                    </label>
+                    <div class="browser-config" id="browserConfig" hidden>
+                        <label class="config-field">
+                            <span>Connection String</span>
+                            <div class="secret-input">
+                                <input id="connectionString" type="password"
+                                    placeholder="Direct Line Secret、Token 或 Token Endpoint URL" autocomplete="off"
+                                    spellcheck="false" />
+                                <button class="input-action" id="revealButton" type="button"
+                                    aria-label="显示 Connection String">显示</button>
+                            </div>
+                        </label>
+                        <div class="config-actions">
+                            <button class="secondary" id="saveConnectionButton" type="button">保存并连接</button>
+                            <button class="text-button danger" id="clearConnectionButton" type="button">清除</button>
+                        </div>
+                        <p class="local-note">仅保存到当前浏览器的 <code>localStorage</code>，不会发送到本项目服务端。</p>
+                    </div>
+                </div>
+                <div class="browser-config" id="d2eConfig" hidden>
+                    <strong>D2E 服务端连接</strong>
+                    <p class="local-note">复用本机委托用户登录缓存，由 Node.js 调用 Copilot Studio SDK，并通过 SSE 推送原生流程片段；首次设备登录已完成。</p>
+                </div>
+                <dl class="facts">
+                    <div>
+                        <dt>传输</dt>
+                        <dd id="transportLabel">Direct Line WebSocket</dd>
+                    </div>
+                    <div>
+                        <dt>安全</dt>
+                        <dd id="securityMode">短期 Token</dd>
+                    </div>
+                    <div>
+                        <dt>流式请求</dt>
+                        <dd><code id="streamingProtocol">deliveryMode: stream</code></dd>
+                    </div>
+                </dl>
+                <div class="button-row">
+                    <button class="primary" id="reconnectButton">重新连接</button>
+                    <button class="secondary" id="testButton">链路自检</button>
+                </div>
+                <p class="hint" id="connectionHint">Secret 仅保留在服务端。</p>
+            </section>
+
+            <section class="how-it-works" id="directLineFlow">
+                <div class="section-heading"><span>流式链路</span></div>
+                <ol>
+                    <li><span>01</span>
+                        <p>服务端用 Secret 换取短期 Token</p>
+                    </li>
+                    <li><span>02</span>
+                        <p>浏览器强制使用 WebSocket</p>
+                    </li>
+                    <li><span>03</span>
+                        <p>发送 Streaming opt-in 事件</p>
+                    </li>
+                    <li><span>04</span>
+                        <p>按 <code>streamId</code> 归并单气泡</p>
+                    </li>
+                </ol>
+            </section>
+
+            <section class="requirement" id="directLineRequirement">
+                <strong>Agent 前置条件</strong>
+                <p><code>Channels_SupportForStreamingEnabled</code> 必须开启，否则只能收到最终消息。</p>
+            </section>
+        </aside>
+
+        <section class="chat-panel" aria-label="Direct Line chat canvas">
+            <div class="panel-header">
+                <div>
+                    <p class="eyebrow">LIVE CANVAS</p>
+                    <h2>Agent 对话</h2>
+                </div>
+                <div class="chat-header-actions">
+                    <span class="conversation" id="conversationId">conversation · —</span>
+                    <button class="new-conversation" id="newConversationButton" type="button" disabled>
+                        <span aria-hidden="true">↻</span>
+                        新对话
+                    </button>
+                </div>
+            </div>
+            <div class="webchat-host" id="webchat" role="main">
+                <div class="empty-state" id="emptyState">
+                    <div class="stream-glyph" aria-hidden="true"><span></span><span></span><span></span></div>
+                    <h3>正在建立流式通道</h3>
+                    <p>连接成功后，发送需要较长回答的问题，观察同一气泡逐步增长。</p>
+                </div>
+            </div>
+            <div class="thinking" id="thinking" hidden>
+                <div class="thinking-head"><span class="pulse"></span><strong>Agent 正在处理</strong></div>
+                <ol id="thinkingSteps"></ol>
+            </div>
+        </section>
+
+        <aside class="inspector" aria-label="Streaming activity inspector">
+            <div class="panel-header inspector-header">
+                <div>
+                    <p class="eyebrow">WIRE INSPECTOR</p>
+                    <h2>实时诊断</h2>
+                </div>
+                <button class="text-button" id="clearButton">清空</button>
+            </div>
+
+            <div class="metrics">
+                <article><strong id="streamMetric">0</strong><span>Streams</span></article>
+                <article><strong id="chunkMetric">0</strong><span>Chunks</span></article>
+                <article><strong id="finalMetric">0</strong><span>Final</span></article>
+                <article><strong id="latencyMetric">—</strong><span>首片延迟</span></article>
+            </div>
+
+            <div class="diagnosis" id="diagnosis" data-state="idle">
+                <span class="diagnosis-icon">·</span>
+                <div><strong>等待测试</strong>
+                    <p>发送消息后判断是否为服务端真流式。</p>
+                </div>
+            </div>
+
+            <div class="legend" aria-label="Activity legend">
+                <span><i class="info"></i>informative</span>
+                <span><i class="stream"></i>streaming</span>
+                <span><i class="final"></i>final</span>
+            </div>
+            <ol class="activity-log" id="activityLog"></ol>
+        </aside>
+    </main>
+
+    <script src="/streaming.js"></script>
+</body>
+
+</html>

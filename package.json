@@ -1,13 +1,18 @@
 {
-    "name": "copilot-studio-directline-streaming-demo",
-    "version": "1.0.0",
+    "name": "copilot-studio-streaming-toolkit",
+    "version": "2.0.0",
     "private": false,
-    "description": "A standalone Direct Line WebSocket livestreaming playground for Microsoft Copilot Studio.",
+    "type": "module",
+    "description": "A standalone Direct Line WebSocket and D2E SSE streaming toolkit for Microsoft Copilot Studio.",
     "license": "MIT",
     "scripts": {
-        "start": "serve . -l 3102"
+        "start": "node --env-file-if-exists=.env server.js",
+        "d2e:login": "node --env-file=.env scripts/d2e-login.js",
+        "check": "node --check server.js && node --check public/streaming.js && node --check scripts/d2e-login.js"
     },
-    "devDependencies": {
-        "serve": "^14.2.4"
+    "dependencies": {
+        "@azure/msal-node": "^5.2.3",
+        "@microsoft/agents-activity": "^1.5.3",
+        "@microsoft/agents-copilotstudio-client": "^1.7.1"
     }
 }
